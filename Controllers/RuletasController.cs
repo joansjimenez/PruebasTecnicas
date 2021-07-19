@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PruebasTenicas.Data;
-using PruebasTenicas.Entities;
 using PruebasTenicas.Models;
 
 namespace PruebasTenicas.Controllers
@@ -22,8 +21,6 @@ namespace PruebasTenicas.Controllers
             _context = context;
         }
 
-
-        // GET: api/Ruletas
         // Function: See all roulettes
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Ruletas>>> GetRoulette()
@@ -31,10 +28,9 @@ namespace PruebasTenicas.Controllers
             return await _context.Ruletas.ToListAsync();
         }
 
-        // GET: api/Ruletas/{id}
         // Function: See specific roulette
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ruletas>> GetRoulette(RouletteEntities data)
+        public async Task<ActionResult<Ruletas>> GetRoulette(Ruletas data)
         {
             var ruletas = await _context.Ruletas.FindAsync(data.RuletaID);
 
@@ -46,7 +42,6 @@ namespace PruebasTenicas.Controllers
             return ruletas;
         }
 
-        // POST: api/Ruletas
         //Function : Create a new roulette
         [HttpPost]
         public async Task<ActionResult<Ruletas>> CreateRoulette(Ruletas data)
@@ -54,18 +49,18 @@ namespace PruebasTenicas.Controllers
             _context.Ruletas.Add(data);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetRoulette), new { RuletaID = data.RuletaID }, data);
+            return CreatedAtAction(nameof(GetRoulette), new { id = data.RuletaID }, data);
         }
 
         //Function: Activate roulettes
-        [HttpPatch("OpenRoulette/{id}")]
-        public async Task<IActionResult> OpenRoulette(int id, [FromQuery] Ruletas data)
+        [HttpPatch("OpenRoulette")]
+        public async Task<IActionResult> OpenRoulette( Ruletas data)
         {
-            if (id != null)
+            if (data.RuletaID != null)
             {
-                var Roulette = await _context.Ruletas.FindAsync(id);
+                var Roulette = await _context.Ruletas.FindAsync(data.RuletaID);
 
-                if (data.Estado != null)
+                if (data.Estado == true && Roulette.Estado == false)
                 {
                     Roulette.Estado = data.Estado;
                     await _context.SaveChangesAsync();
@@ -80,6 +75,81 @@ namespace PruebasTenicas.Controllers
             else
             {
                 return StatusCode(400, "Ha ocurrido un error en el proceso.");
+            }
+        }
+
+        //Function: Close active roulettes
+        [HttpPatch("CloseRoulette")]
+        public async Task<IActionResult> CloseRoulette(Ruletas data)
+        {
+            //select winner game
+            System.Random rnd = new System.Random();
+            var WinnerNumber = rnd.Next(0, 37);
+
+            //winners Array
+            List<string> Winners; 
+
+            //validate winner
+            if (data.RuletaID != null)
+            {
+                var roulette = await _context.Ruletas.FindAsync(data.RuletaID);
+                if (roulette.Estado == true)
+                {
+                    var AllBets = await _context.Apuestas.Where(x => x.RuletaID == data.RuletaID).AsNoTracking().ToListAsync();
+                    if (AllBets.Count > 0)
+                    {
+                        for (int i = 0; i < AllBets.Count; i++)
+                        {
+                            var user = await _context.Usuario.FindAsync(AllBets[i].UsuarioID);
+                            var BetResult = await _context.Apuestas.FindAsync(AllBets[i].ApuestaID);
+                            if (AllBets[i].ApuestaNumeroID == WinnerNumber)
+                            {
+                                var profit = BetResult.CantidadApuesta * 5;
+                                BetResult.EstadoApuesta = false;
+                                BetResult.PremioApuesta = BetResult.CantidadApuesta * 5;
+                                user.Creditos = user.Creditos + profit;
+
+                                await _context.SaveChangesAsync();
+                            }
+                            else if ((WinnerNumber % 2) == 0)
+                            {
+                                if (AllBets[i].ApuestaNumeroID == 38)
+                                {
+                                    var profit = BetResult.CantidadApuesta * 1.8;
+                                    BetResult.EstadoApuesta = false;
+                                    BetResult.PremioApuesta = BetResult.CantidadApuesta * 1.8;
+                                    user.Creditos = user.Creditos + profit;
+                                    await _context.SaveChangesAsync();
+                                }
+                            }
+                            else 
+                            {
+                                if (AllBets[i].ApuestaNumeroID == 39)
+                                {
+                                    var profit = BetResult.CantidadApuesta * 1.8;
+                                    BetResult.EstadoApuesta = false;
+                                    BetResult.PremioApuesta = BetResult.CantidadApuesta * 1.8;
+                                    user.Creditos = user.Creditos + profit;
+                                    await _context.SaveChangesAsync();
+                                }
+                            }
+                        }
+                        var ExitData = await _context.Apuestas.Where(y => y.RuletaID == data.RuletaID).AsNoTracking().ToListAsync();
+                        return StatusCode(201, ExitData);
+                    }
+                    else
+                    {
+                        return StatusCode(400, "La ruleta no contaba con apuestas activas.");
+                    }
+                }
+                else
+                {
+                    return StatusCode(400, "La ruleta no se encuentra activa.");
+                }
+            }
+            else
+            {
+                return StatusCode(400, "Se requiere una ruleta");
             }
         }
 

@@ -6,15 +6,12 @@ using System.Threading.Tasks;
 
 namespace PruebasTenicas.Models
 {
-    //Table of roulets
-
-    public class Ruletas
+    public class ApuestasNumeros
     {
         [Key]
         [Required]
-        public int RuletaID {get; set;}
-        public string Nombre { get; set; }
+        public int ApuestaNumeroID { get; set; }
         [Required]
-        public bool Estado { get; set; }
+        public string Nombre { get; set; }
     }
 }
