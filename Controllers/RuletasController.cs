@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PruebasTenicas.Data;
+using PruebasTenicas.Entities;
 using PruebasTenicas.Models;
 
 namespace PruebasTenicas.Controllers
@@ -21,18 +22,21 @@ namespace PruebasTenicas.Controllers
             _context = context;
         }
 
+
         // GET: api/Ruletas
+        // Function: See all roulettes
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Ruletas>>> GetRuletas()
+        public async Task<ActionResult<IEnumerable<Ruletas>>> GetRoulette()
         {
             return await _context.Ruletas.ToListAsync();
         }
 
-        // GET: api/Ruletas/5
+        // GET: api/Ruletas/{id}
+        // Function: See specific roulette
         [HttpGet("{id}")]
-        public async Task<ActionResult<Ruletas>> GetRuletas(int id)
+        public async Task<ActionResult<Ruletas>> GetRoulette(RouletteEntities data)
         {
-            var ruletas = await _context.Ruletas.FindAsync(id);
+            var ruletas = await _context.Ruletas.FindAsync(data.RuletaID);
 
             if (ruletas == null)
             {
@@ -42,64 +46,44 @@ namespace PruebasTenicas.Controllers
             return ruletas;
         }
 
-        // PUT: api/Ruletas/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutRuletas(int id, Ruletas ruletas)
+        // POST: api/Ruletas
+        //Function : Create a new roulette
+        [HttpPost]
+        public async Task<ActionResult<Ruletas>> CreateRoulette(Ruletas data)
         {
-            if (id != ruletas.RuletaID)
-            {
-                return BadRequest();
-            }
+            _context.Ruletas.Add(data);
+            await _context.SaveChangesAsync();
 
-            _context.Entry(ruletas).State = EntityState.Modified;
+            return CreatedAtAction(nameof(GetRoulette), new { RuletaID = data.RuletaID }, data);
+        }
 
-            try
+        //Function: Activate roulettes
+        [HttpPatch("OpenRoulette/{id}")]
+        public async Task<IActionResult> OpenRoulette(int id, [FromQuery] Ruletas data)
+        {
+            if (id != null)
             {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!RuletasExists(id))
+                var Roulette = await _context.Ruletas.FindAsync(id);
+
+                if (data.Estado != null)
                 {
-                    return NotFound();
+                    Roulette.Estado = data.Estado;
+                    await _context.SaveChangesAsync();
+                    return StatusCode(201, Roulette);
                 }
                 else
                 {
-                    throw;
+                    return StatusCode(400, "Ha ocurrido un error en el proceso.");
                 }
+
             }
-
-            return NoContent();
-        }
-
-        // POST: api/Ruletas
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<Ruletas>> PostRuletas(Ruletas ruletas)
-        {
-            _context.Ruletas.Add(ruletas);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction("GetRuletas", new { id = ruletas.RuletaID }, ruletas);
-        }
-
-        // DELETE: api/Ruletas/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteRuletas(int id)
-        {
-            var ruletas = await _context.Ruletas.FindAsync(id);
-            if (ruletas == null)
+            else
             {
-                return NotFound();
+                return StatusCode(400, "Ha ocurrido un error en el proceso.");
             }
-
-            _context.Ruletas.Remove(ruletas);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
 
+        //validator id
         private bool RuletasExists(int id)
         {
             return _context.Ruletas.Any(e => e.RuletaID == id);
