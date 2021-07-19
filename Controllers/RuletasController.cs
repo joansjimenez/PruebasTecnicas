@@ -78,16 +78,13 @@ namespace PruebasTenicas.Controllers
             }
         }
 
-        //Function: Close active roulettes
+        //Function: Close active roulettes and give prizes
         [HttpPatch("CloseRoulette")]
         public async Task<IActionResult> CloseRoulette(Ruletas data)
         {
             //select winner game
             System.Random rnd = new System.Random();
             var WinnerNumber = rnd.Next(0, 37);
-
-            //winners Array
-            List<string> Winners; 
 
             //validate winner
             if (data.RuletaID != null)
@@ -102,6 +99,9 @@ namespace PruebasTenicas.Controllers
                         {
                             var user = await _context.Usuario.FindAsync(AllBets[i].UsuarioID);
                             var BetResult = await _context.Apuestas.FindAsync(AllBets[i].ApuestaID);
+
+                            //winner with normal number
+
                             if (AllBets[i].ApuestaNumeroID == WinnerNumber)
                             {
                                 var profit = BetResult.CantidadApuesta * 5;
@@ -111,6 +111,7 @@ namespace PruebasTenicas.Controllers
 
                                 await _context.SaveChangesAsync();
                             }
+                            // winner with red color
                             else if ((WinnerNumber % 2) == 0)
                             {
                                 if (AllBets[i].ApuestaNumeroID == 38)
@@ -122,7 +123,8 @@ namespace PruebasTenicas.Controllers
                                     await _context.SaveChangesAsync();
                                 }
                             }
-                            else 
+                            // winner with black color
+                            else
                             {
                                 if (AllBets[i].ApuestaNumeroID == 39)
                                 {
